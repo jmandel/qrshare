@@ -1,177 +1,232 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>QR Share Receiver</title>
-  <link rel="manifest" href="./manifest.json">
-  <meta name="theme-color" content="#4285f4">
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 20px;
-      line-height: 1.6;
-    }
-    h1 {
-      color: #4285f4;
-    }
-    #qrResult {
-      margin-top: 20px;
-      padding: 15px;
-      background-color: #f0f0f0;
-      border-radius: 5px;
-    }
-    #qrContent {
-      font-size: 18px;
-      word-break: break-all;
-    }
-    #copyButton {
-      margin-top: 10px;
-      padding: 10px 15px;
-      background-color: #4285f4;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    #copyButton:hover {
-      background-color: #3b78e7;
-    }
-    #imageInfo {
-      margin-top: 20px;
-    }
-    #installPWA {
-      display: none;
-      margin-top: 20px;
-      padding: 10px;
-      background-color: #4285f4;
-      color: white;
-      text-align: center;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure QR Code Scanner</title>
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#4285f4">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #4285f4;
+        }
+        #qrResults, #imageInfo {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f0f0f0;
+            border-radius: 5px;
+        }
+        .qrResult {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #ffffff;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .qrContent {
+            font-size: 16px;
+            word-break: break-all;
+            white-space: pre-wrap;
+        }
+        .copyButton {
+            margin-top: 5px;
+            padding: 5px 10px;
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .copyButton:hover {
+            background-color: #3b78e7;
+        }
+        #installPWA {
+            display: none;
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #4285f4;
+            color: white;
+            text-align: center;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
-  <h1>QR Code Scanner</h1>
-  <div id="qrResult">
-    <h2>QR Code Content:</h2>
-    <pre id="qrContent">No QR code scanned yet.</pre>
-    <button id="copyButton">Copy to Clipboard</button>
-  </div>
-  <div id="imageInfo"></div>
-  <div id="installPWA">Install this app on your device!</div>
-  
-  <script type="module">
-    import QrScanner from 'https://esm.sh/qr-scanner@1.4.2';
+    <h1>Secure QR Code Scanner</h1>
+    <div id="qrResults"></div>
+    <div id="imageInfo"></div>
+    <div id="installPWA">Install this app on your device!</div>
+    
+    <script type="module">
+        import QrScanner from 'https://esm.sh/qr-scanner@1.4.2';
 
-    function openDB() {
-      return new Promise((resolve, reject) => {
-        const request = indexedDB.open('ImageDB', 1);
-        request.onerror = () => reject(request.error);
-        request.onsuccess = () => resolve(request.result);
-        request.onupgradeneeded = (event) => {
-          const db = event.target.result;
-          db.createObjectStore('images', { keyPath: 'id' });
-        };
-      });
-    }
+        // Set the worker path
+        QrScanner.WORKER_PATH = 'https://cdn.jsdelivr.net/npm/qr-scanner@1.4.2/qr-scanner-worker.min.js';
 
-    async function getImageFromDB() {
-      const db = await openDB();
-      return new Promise((resolve, reject) => {
-        const transaction = db.transaction(['images'], 'readonly');
-        const store = transaction.objectStore('images');
-        const request = store.get('sharedImage');
-        request.onerror = () => reject(request.error);
-        request.onsuccess = () => resolve(request.result ? request.result.data : null);
-      });
-    }
-
-    async function handleSharedImage(imageData) {
-      const img = new Image();
-      img.onload = async () => {
-        const width = img.naturalWidth;
-        const height = img.naturalHeight;
-        const pixels = width * height;
-        document.getElementById('imageInfo').innerHTML = `
-          <p>Width: ${width}px</p>
-          <p>Height: ${height}px</p>
-          <p>Pixels: ${pixels}</p>
-          <img src="${imageData}" alt="Shared Image" style="max-width: 100%;">
-        `;
-
-        // Scan for QR code
-        try {
-          const result = await QrScanner.scanImage(img);
-          document.getElementById('qrContent').textContent = result;
-        } catch (error) {
-          document.getElementById('qrContent').textContent = 'No QR code found or unable to scan.';
+        function openDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('ImageDB', 1);
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => resolve(request.result);
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    db.createObjectStore('images', { keyPath: 'id' });
+                };
+            });
         }
 
-        // Clean up the IndexedDB
-        const db = await openDB();
-        const transaction = db.transaction(['images'], 'readwrite');
-        const store = transaction.objectStore('images');
-        store.delete('sharedImage');
-      };
-      img.src = imageData;
-    }
-
-    // Check for shared image data
-    async function init() {
-      const sharedImageData = await getImageFromDB();
-      if (sharedImageData) {
-        handleSharedImage(sharedImageData);
-      } else {
-        document.getElementById('imageInfo').innerHTML = 'No image shared.';
-      }
-    }
-
-    init();
-
-    // Copy to clipboard functionality
-    document.getElementById('copyButton').addEventListener('click', () => {
-      const content = document.getElementById('qrContent').textContent;
-      navigator.clipboard.writeText(content).then(() => { }).catch(err => {
-        console.error('Failed to copy: ', err);
-      });
-    });
-
-    // Register service worker for PWA functionality 
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-          .then(registration => {
-            console.log('Service worker registered:', registration);
-          })
-          .catch(error => {
-            console.error('Service worker registration failed:', error);
-          });
-      });
-    }
-
-    // PWA installation prompt
-    let deferredPrompt;
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
-      document.getElementById('installPWA').style.display = 'block';
-    });
-
-    document.getElementById('installPWA').addEventListener('click', (e) => {
-      deferredPrompt.prompt();
-      deferredPrompt.userChoice.then((choiceResult) => {
-        if (choiceResult.outcome === 'accepted') {
-          console.log('User accepted the install prompt');
-        } else {
-          console.log('User dismissed the install prompt');
+        async function getImageFromDB() {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(['images'], 'readonly');
+                const store = transaction.objectStore('images');
+                const request = store.get('sharedImage');
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => resolve(request.result ? request.result.data : null);
+            });
         }
-        deferredPrompt = null;
-      });
-    });
-  </script>
+
+        function sanitizeText(text) {
+            const element = document.createElement('div');
+            element.textContent = text;
+            return element.innerHTML;
+        }
+
+        async function handleSharedImage(imageData) {
+            const img = new Image();
+            img.onload = async () => {
+                const width = img.naturalWidth;
+                const height = img.naturalHeight;
+                const pixels = width * height;
+                
+                const infoDiv = document.getElementById('imageInfo');
+                infoDiv.textContent = ''; // Clear previous content safely
+
+                const infoParagraph = document.createElement('p');
+                infoParagraph.textContent = `Width: ${width}px, Height: ${height}px, Pixels: ${pixels}`;
+                infoDiv.appendChild(infoParagraph);
+
+                const sharedImg = document.createElement('img');
+                sharedImg.src = imageData;
+                sharedImg.alt = "Shared Image";
+                sharedImg.style.maxWidth = "100%";
+                infoDiv.appendChild(sharedImg);
+
+                // Scan for QR codes
+                try {
+                    const qrResults = await QrScanner.scanImage(img, { returnDetailedScanResult: true });
+                    displayQRResults(qrResults);
+                } catch (error) {
+                    const qrResultsDiv = document.getElementById('qrResults');
+                    qrResultsDiv.textContent = 'No QR codes found or unable to scan.';
+                }
+
+                // Clean up the IndexedDB
+                const db = await openDB();
+                const transaction = db.transaction(['images'], 'readwrite');
+                const store = transaction.objectStore('images');
+                store.delete('sharedImage');
+            };
+            img.src = imageData;
+        }
+
+        function displayQRResults(results) {
+            const resultsContainer = document.getElementById('qrResults');
+            resultsContainer.textContent = ''; // Clear previous content safely
+
+            const heading = document.createElement('h2');
+            heading.textContent = 'QR Code Results:';
+            resultsContainer.appendChild(heading);
+            
+            if (results.length === 0) {
+                const noResults = document.createElement('p');
+                noResults.textContent = 'No QR codes found in the image.';
+                resultsContainer.appendChild(noResults);
+                return;
+            }
+
+            results.forEach((result, index) => {
+                const resultDiv = document.createElement('div');
+                resultDiv.className = 'qrResult';
+
+                const resultHeading = document.createElement('h3');
+                resultHeading.textContent = `QR Code ${index + 1}`;
+                resultDiv.appendChild(resultHeading);
+
+                const contentPre = document.createElement('pre');
+                contentPre.className = 'qrContent';
+                contentPre.textContent = result.data;
+                resultDiv.appendChild(contentPre);
+
+                const copyButton = document.createElement('button');
+                copyButton.className = 'copyButton';
+                copyButton.textContent = 'Copy to Clipboard';
+                copyButton.addEventListener('click', () => {
+                    navigator.clipboard.writeText(result.data).then(() => {
+                        alert('Content copied to clipboard!');
+                    }).catch(err => {
+                        console.error('Failed to copy: ', err);
+                    });
+                });
+                resultDiv.appendChild(copyButton);
+
+                resultsContainer.appendChild(resultDiv);
+            });
+        }
+
+        // Check for shared image data
+        async function init() {
+            const sharedImageData = await getImageFromDB();
+            if (sharedImageData) {
+                handleSharedImage(sharedImageData);
+            } else {
+                const qrResultsDiv = document.getElementById('qrResults');
+                qrResultsDiv.textContent = 'No image shared. Share an image containing QR codes to scan.';
+            }
+        }
+
+        init();
+
+        // Register service worker for PWA functionality 
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => {
+                        console.log('Service worker registered:', registration);
+                    })
+                    .catch(error => {
+                        console.error('Service worker registration failed:', error);
+                    });
+            });
+        }
+
+        // PWA installation prompt
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('installPWA').style.display = 'block';
+        });
+
+        document.getElementById('installPWA').addEventListener('click', () => {
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then((choiceResult) => {
+                if (choiceResult.outcome === 'accepted') {
+                    console.log('User accepted the install prompt');
+                } else {
+                    console.log('User dismissed the install prompt');
+                }
+                deferredPrompt = null;
+            });
+        });
+    </script>
 </body>
 </html>
