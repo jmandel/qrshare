@@ -1,0 +1,29 @@
+{
+  "name": "QR Share Receiver",
+  "short_name": "QrShare",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ],
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "share_target": {
+    "action": "./share-handler",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "files": [
+        {
+          "name": "image",
+          "accept": "image/*"
+        }
+      ]
+    }
+  }
+}
